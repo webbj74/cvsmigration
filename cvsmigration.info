@@ -1,5 +1,5 @@
 ; $Id$
-name = "CVS Migration Preferences"
+name = "CVS Migration"
 description = "Sets up email preferences for Git repository based on CVS account information"
 package = Project
 core = 6.x

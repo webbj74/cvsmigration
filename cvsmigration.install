@@ -1,0 +1,89 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update, and install functions for the cvsmigration module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function cvsmigration_schema() {
+  $schema['cvs_migration'] = array(
+    'description' => t('Data about all CVS account holders on the site.'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('Foreign key: {users}.uid of the user.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'cvs_user' => array(
+        'description' => t('A CVS username for this user (usually {cvs_accounts}.cvs_accounts.'),
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'repomail' => array(
+        'description' => t('An email address to associate with the user\'s CVS username.'),
+        'type' => 'varchar',
+        'length' => 254,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('uid', array('cvs_user', 32)),
+    'indexes' => array(
+      'uid' => array('uid'),
+      'repomail' => array('repomail'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function cvsmigration_install() {
+  // Create table
+  drupal_install_schema('cvsmigration');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function cvsmigration_uninstall() {
+  // Remove table
+  drupal_uninstall_schema('cvsmigration');
+}
+
+/**
+ * Implements hook_enable().
+ *
+ * Pre-populates {cvs_migration} with anonymized email addresses based on
+ * existing CVS username.
+ */
+function cvsmigration_enable() {
+  $result = db_query('SELECT uid, cvs_user from {cvs_accounts}');
+
+  while($row = db_fetch_object($result)) {
+    $uid = $row->uid;
+    $cvs_user = $row->cvs_user;
+
+    // Insert default value if it doesn't already exist for a user
+    if (!db_result(db_query("SELECT COUNT(*) FROM {cvs_migration} WHERE uid = %d AND cvs_user = '%s'", array($uid, $cvs_user)))) {
+      // Convert invalid email characters to underscores.
+      $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+      $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
+
+      // By default we build an anonymous email address
+      $repomail = "$valid_user@$uid.no-reply.drupal.org";
+
+      db_query("INSERT INTO {cvs_migration} (uid, cvs_user, repomail) VALUES (%d, '%s', '%s')", array($uid, $cvs_user, $repomail));
+    }
+  }
+}
+
