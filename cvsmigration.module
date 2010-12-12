@@ -7,3 +7,46 @@
  */
 
 
+/**
+ * Implements hook_form_alter().
+ *
+ * Overrides the CVS module's form to allow the user to edit the
+ * preferred email address to associate with their CVS username(s).
+ * The default email is cvs_user@uid.no-reply.drupal.org.
+ */
+function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
+  global $user;
+  $uid = $user->uid;
+  $cvs_user = $form['cvs']['cvs_user']['#default_value'];
+
+  // Get a list of existing migration emails associated with this user
+  $result = db_query("SELECT repomail FROM {cvs_migration} WHERE uid = %d", array($user->uid));
+
+  $options = array();
+  $options[$user->mail] = $user->mail;
+  $default_value = '';
+  while ($row = db_fetch_object($result)) {
+    $options[$row->repomail] = $row->repomail;
+    if (empty($default_value)) {
+      $default_value = $row->repomail;
+    }
+  }
+
+  // Convert invalid email characters to underscores.
+  $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+  $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
+
+  // By default we build an anonymous email address
+  $repomail = "$valid_user@$uid.no-reply.drupal.org";
+  $options[$repomail] = $repomail;
+
+  $form['cvs']['repomail'] = array(
+    '#type' => 'select',
+    '#title' => t('Repository Email'),
+    '#default_value' => $default_value,
+    '#options' => array(
+      '' => t('Please Select...'),
+    ) + $options,
+    '#description' => t('The address you select here is publically visible. If you would prefer an anonymous email, select %default', array('%default' => $repomail)),
+  );
+}
