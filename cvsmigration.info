@@ -1,0 +1,7 @@
+; $Id$
+name = "CVS Migration Preferences"
+description = "Sets up email preferences for Git repository based on CVS account information"
+package = Project
+core = 6.x
+dependencies[] = cvs
+
