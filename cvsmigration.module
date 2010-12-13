@@ -6,6 +6,53 @@
  * Main implementation file for the CVS Migration module.
  */
 
+/**
+ * Validates repository email preference.
+ */
+function cvsmigration_repomail_validate($form, &$form_state) {
+  if (!valid_email_address($form_state['values']['repomail'])) {
+    form_set_error('repomail', t('You must select a valid email address.'));
+  }
+}
+
+/**
+ * Update repository email preference.
+ */
+function cvsmigration_repomail_submit($form, &$form_state) {
+
+  if (isset($form_state['values']['cvs_uid'])) {
+    $uid = $form_state['values']['cvs_uid'];
+  }
+  else {
+    global $user;
+    $uid = $user->uid;
+  }
+
+  if (isset($form_state['values']['cvs_user'])) {
+    $cvs_user = $form_state['values']['cvs_user'];
+  }
+  else {
+    $cvs_user = $form['cvs']['cvs_user']['#value'];
+  }
+  $repomail = $form_state['values']['repomail'];
+
+  $string_args = array(
+    '%repomail' => $repomail,
+    '%cvs_user' => $cvs_user,
+  );
+
+  if (db_result(db_query("SELECT COUNT(*) FROM {cvs_migration} WHERE uid = %d AND cvs_user = '%s'", array($uid, $cvs_user)))) {
+    db_query("UPDATE {cvs_migration} SET repomail = '%s' WHERE uid = %d AND cvs_user = '%s'", array($repomail, $uid, $cvs_user));
+    watchdog('user', 'Repository email for CVS user %cvs_user changed to %repomail.', $string_args, WATCHDOG_NOTICE);
+    drupal_set_message(t('Repository email for CVS user %cvs_user changed to %repomail.', $string_args));
+  }
+  else {
+    db_query("INSERT INTO {cvs_migration} (uid, cvs_user, repomail) VALUES (%d, '%s', '%s')", array($uid, $cvs_user, $repomail));
+    watchdog('user', 'Added repository email %repomail for CVS user %cvs_user.', $string_args, WATCHDOG_NOTICE);
+    drupal_set_message(t('Added repository email %repomail for CVS user %cvs_user.', $string_args));
+  }
+
+}
 
 /**
  * Implements hook_form_alter().
@@ -15,23 +62,27 @@
  * The default email is cvs_user@uid.no-reply.drupal.org.
  */
 function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
-  global $user;
-  $uid = $user->uid;
-  $cvs_user = $form['cvs']['cvs_user']['#default_value'];
-
-  // Get a list of existing migration emails associated with this user
-  $result = db_query("SELECT repomail FROM {cvs_migration} WHERE uid = %d", array($user->uid));
-
-  $options = array();
-  $options[$user->mail] = $user->mail;
-  $default_value = '';
-  while ($row = db_fetch_object($result)) {
-    $options[$row->repomail] = $row->repomail;
-    if (empty($default_value)) {
-      $default_value = $row->repomail;
-    }
+  $account = 0;
+  $uid = 0;
+  if (isset($form['cvs']['cvs_uid']['#value'])) {
+    $uid = $form['cvs']['cvs_uid']['#value'];
+    $account = user_load(array('uid' => $uid));
+  }
+  else {
+    global $user;
+    $uid = $user->uid;
+    $account = $user;
+  }
+  if (isset($form['cvs']['cvs_user']['#value'])) {
+    $cvs_user = $form['cvs']['cvs_user']['#value'];
+  }
+  else {
+    $cvs_user = $form['cvs']['cvs_user']['#default_value'];
   }
 
+  $options = array();
+
+  // Get a list of existing migration emails associated with this user
   // Convert invalid email characters to underscores.
   $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
   $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
@@ -40,6 +91,18 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
   $repomail = "$valid_user@$uid.no-reply.drupal.org";
   $options[$repomail] = $repomail;
 
+  $result = db_query("SELECT cvs_user, repomail FROM {cvs_migration} WHERE uid = %d", array($uid));
+
+  $options[$account->mail] = $account->mail;
+  $default_value = $repomail;
+  while ($row = db_fetch_object($result)) {
+    $options[$row->repomail] = $row->repomail;
+    if ($row->cvs_user == $cvs_user) {
+      $default_value = $row->repomail;
+    }
+  }
+
+
   $form['cvs']['repomail'] = array(
     '#type' => 'select',
     '#title' => t('Repository Email'),
@@ -47,6 +110,10 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
     '#options' => array(
       '' => t('Please Select...'),
     ) + $options,
-    '#description' => t('The address you select here is publically visible. If you would prefer an anonymous email, select %default', array('%default' => $repomail)),
+    '#description' => t('The address you select here is publicly visible. If you would prefer an anonymous email, select %default', array('%default' => $repomail)),
+    '#required' => TRUE,
   );
+
+  $form['#validate'][] = 'cvsmigration_repomail_validate';
+  $form['#submit'][] = 'cvsmigration_repomail_submit';
 }
