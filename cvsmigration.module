@@ -41,8 +41,9 @@ function cvsmigration_repomail_submit($form, &$form_state) {
     '%cvs_user' => $cvs_user,
   );
 
-  if (db_result(db_query("SELECT COUNT(*) FROM {cvs_migration} WHERE uid = %d AND cvs_user = '%s'", array($uid, $cvs_user)))) {
-    db_query("UPDATE {cvs_migration} SET repomail = '%s' WHERE uid = %d AND cvs_user = '%s'", array($repomail, $uid, $cvs_user));
+  // Update any CVS Usernames associated with this Drupal User
+  if (db_result(db_query("SELECT COUNT(*) FROM {cvs_migration} WHERE uid = %d", array($uid)))) {
+    db_query("UPDATE {cvs_migration} SET repomail = '%s' WHERE uid = %d", array($repomail, $uid));
     watchdog('user', 'Repository email for CVS user %cvs_user changed to %repomail.', $string_args, WATCHDOG_NOTICE);
     drupal_set_message(t('Repository email for CVS user %cvs_user changed to %repomail.', $string_args));
   }
@@ -50,11 +51,6 @@ function cvsmigration_repomail_submit($form, &$form_state) {
     db_query("INSERT INTO {cvs_migration} (uid, cvs_user, repomail) VALUES (%d, '%s', '%s')", array($uid, $cvs_user, $repomail));
     watchdog('user', 'Added repository email %repomail for CVS user %cvs_user.', $string_args, WATCHDOG_NOTICE);
     drupal_set_message(t('Added repository email %repomail for CVS user %cvs_user.', $string_args));
-  }
-
-  if (module_exists('multiple_email')) {
-    drupal_load('module','multiple_email');
-    multiple_email_register_email($uid, $repomail, true);
   }
 
 }

@@ -83,10 +83,6 @@ function cvsmigration_enable() {
       $repomail = "$valid_user@$uid.no-reply.drupal.org";
 
       db_query("INSERT INTO {cvs_migration} (uid, cvs_user, repomail) VALUES (%d, '%s', '%s')", array($uid, $cvs_user, $repomail));
-      if (module_exists('multiple_email')) {
-        drupal_load('module','multiple_email');
-        multiple_email_register_email($uid, $repomail, true);
-      }
     }
   }
 }
