@@ -52,6 +52,11 @@ function cvsmigration_repomail_submit($form, &$form_state) {
     drupal_set_message(t('Added repository email %repomail for CVS user %cvs_user.', $string_args));
   }
 
+  if (module_exists('multiple_email')) {
+    drupal_load('module','multiple_email');
+    multiple_email_register_email($uid, $repomail, true);
+  }
+
 }
 
 /**
@@ -102,6 +107,11 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
     }
   }
 
+  if (module_exists('multiple_email')) {
+    drupal_load('module','multiple_email');
+    $addresses = multiple_email_load_addresses($uid);
+    $options += array_combine($addresses[0], $addresses[0]);
+  }
 
   $form['cvs']['repomail'] = array(
     '#type' => 'select',
