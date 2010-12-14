@@ -1,0 +1,42 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * SimpleTest module unit tests for the CVS Migration module.
+ */
+
+
+class CVSMigrationTest extends DrupalUnitTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('CVS Migration tests'),
+      'description' => t('Tests for the CVS Migration module.'),
+      'group' => t('Project'),
+    );
+  }
+
+  /**
+   * Ensures that anonymized email addresses are Drupal validated.
+   */
+  function testMakeAnonymizedMail() {
+
+    // Test 2000 randomly generated addresses. Using randomString()
+    // method to test the range of possible email characters.
+    for ($i = 0; $i < 2000; $i++) {
+      $uid = mt_rand(0, mt_getrandmax());
+      $cvs_user = $this->randomString(rand(0, 64));
+      $mail = cvsmigration_make_anonymized_address($uid, $cvs_user);
+
+      // Check that the address is valid
+      $result = valid_email_address($mail);
+      $message = t('Only valid email addresses should be returned: %uid + %user = %mail', array('%uid' => $uid, '%user' => $cvs_user, '%mail' => $mail));
+      $this->assertTrue($result, $message);
+
+      // Check the length of the address
+      $result = (drupal_strlen($mail) < 254);
+      $message = t('Address exceeded the length set for the datatype.');
+      $this->assertTrue($result, $message);
+    }
+  }
+}
