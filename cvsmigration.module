@@ -1,10 +1,33 @@
 <?php
-// $Id
+// $Id$
 
 /**
  * @file
  * Main implementation file for the CVS Migration module.
  */
+
+/**
+ * Produce an anonymous email address based on the CVS Username and
+ * d.o {users}.uid.
+ *
+ * @param $uid
+ *   The Drupal userid of the CVS User.
+ * @param $cvs_user
+ *   The CVS Username of the user.
+ * @return
+ *   An email address in the format: cvs_user@uid.no-reply.drupal.org.
+ */
+function cvsmigration_make_anonymized_address($uid, $cvs_user) {
+
+  // Convert invalid email characters to underscores.
+  $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+  $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
+
+  // By default we build an anonymous email address
+  $anonymized_mail = "$valid_user@$uid.no-reply.drupal.org";
+
+  return $anonymized_mail;
+}
 
 /**
  * Validates repository email preference.
@@ -83,28 +106,29 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
 
   $options = array();
 
-  // Get a list of existing migration emails associated with this user
-  // Convert invalid email characters to underscores.
-  $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
-  $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
-
-  // By default we build an anonymous email address
-  $repomail = "$valid_user@$uid.no-reply.drupal.org";
+  // Prime the list with an anonymous email address (default selection).
+  $repomail = cvsmigration_make_anonymized_address($uid, $cvs_user);
   $options[$repomail] = $repomail;
-
-  $result = db_query("SELECT cvs_user, repomail FROM {cvs_migration} WHERE uid = %d", array($uid));
-
-  $options[$account->mail] = $account->mail;
   $default_value = $repomail;
+
+  // Add the user's primary account address.
+  $options[$account->mail] = $account->mail;
+
+  // Get a list of existing migration emails associated with this user.
+  $result = db_query("SELECT cvs_user, repomail FROM {cvs_migration} WHERE uid = %d", array($uid));
   while ($row = db_fetch_object($result)) {
     $options[$row->repomail] = $row->repomail;
+
+    // Override default with existing value for the active CVS username.
     if ($row->cvs_user == $cvs_user) {
       $default_value = $row->repomail;
     }
   }
 
+  // If the Multiple Email module is installed, merge its addresses for
+  // this user.
   if (module_exists('multiple_email')) {
-    drupal_load('module','multiple_email');
+    drupal_load('module', 'multiple_email');
     $addresses = multiple_email_load_addresses($uid);
     $options += array_combine($addresses[0], $addresses[0]);
   }
