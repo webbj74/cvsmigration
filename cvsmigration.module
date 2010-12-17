@@ -148,7 +148,7 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
     '#options' => array(
       '' => t('Please Select...'),
     ) + $options,
-    '#description' => t('The address you select here is publicly visible. If you would prefer an anonymous email, select %default', array('%default' => $repomail)),
+    '#description' => t('The address you select here will be when migrating CVS data to Git in order to map all of your historical CVS commits to proper git commit metadata (!explanation). That means the address will be semi-public (in the git metadata, but not vieweable over HTTP).  If you would prefer an anonymous email, select %default', array('!explanation' => '<a href="http://drupal.org/node/898816">explanation</a>', '%default' => $repomail)),
     '#required' => TRUE,
   );
 
