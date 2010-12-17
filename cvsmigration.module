@@ -17,14 +17,14 @@
  * @return
  *   An email address in the format: cvs_user@uid.no-reply.drupal.org.
  */
-function cvsmigration_make_anonymized_address($uid, $cvs_user) {
+function cvsmigration_make_anonymized_address($uid, $username) {
 
   // In the scope of this project we shouldn't get empty or invalid
   // CVS usernames, but just in case:
 
   // - Convert invalid email characters to underscores.
   $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
-  $valid_user = preg_replace("/$invalid/", '_', $cvs_user);
+  $valid_user = preg_replace("/$invalid/", '_', $username);
 
   // - Reset empty usernames to something sensible.
   if (empty($valid_user)) {
@@ -115,7 +115,7 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
   $options = array();
 
   // Prime the list with an anonymous email address (default selection).
-  $repomail = cvsmigration_make_anonymized_address($uid, $cvs_user);
+  $repomail = cvsmigration_make_anonymized_address($uid, $account->name);
   $options[$repomail] = $repomail;
   $default_value = $repomail;
 
@@ -148,7 +148,7 @@ function cvsmigration_form_cvs_user_edit_form_alter(&$form, $form_state) {
     '#options' => array(
       '' => t('Please Select...'),
     ) + $options,
-    '#description' => t('The address you select here is publicly visible. If you would prefer an anonymous email, select %default', array('%default' => $repomail)),
+    '#description' => t('The address you select here will be when migrating CVS data to Git in order to map all of your historical CVS commits to proper git commit metadata (!explanation). That means the address will be semi-public (in the git metadata, but not vieweable over HTTP).  If you would prefer an anonymous email, select %default', array('!explanation' => '<a href="http://drupal.org/node/898816">explanation</a>', '%default' => $repomail)),
     '#required' => TRUE,
   );
 
