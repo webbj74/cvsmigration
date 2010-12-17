@@ -75,7 +75,8 @@ function cvsmigration_enable() {
 
     // Insert default value if it doesn't already exist for a user
     if (!db_result(db_query("SELECT COUNT(*) FROM {cvs_migration} WHERE uid = %d AND cvs_user = '%s'", array($uid, $cvs_user)))) {
-      $repomail = cvsmigration_make_anonymized_address($uid, $cvs_user);
+      $account = user_load(array('uid' => $uid));
+      $repomail = cvsmigration_make_anonymized_address($uid, $account->name);
       db_query("INSERT INTO {cvs_migration} (uid, cvs_user, repomail) VALUES (%d, '%s', '%s')", array($uid, $cvs_user, $repomail));
     }
   }

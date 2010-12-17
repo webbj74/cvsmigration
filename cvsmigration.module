@@ -22,8 +22,10 @@ function cvsmigration_make_anonymized_address($uid, $username) {
   // In the scope of this project we shouldn't get empty or invalid
   // CVS usernames, but just in case:
 
-  // - Convert invalid email characters to underscores.
-  $invalid = '[^a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+  // - Convert invalid email characters to underscores. The character set
+  //   Is more conservative than drupal's valid_email_address function to
+  //   be on the safe side.
+  $invalid = '[^a-zA-Z0-9_\-\+]+';
   $valid_user = preg_replace("/$invalid/", '_', $username);
 
   // - Reset empty usernames to something sensible.
@@ -32,7 +34,7 @@ function cvsmigration_make_anonymized_address($uid, $username) {
   }
 
   // Format per: http://drupal.org/node/992802
-  $anonymized_mail = "$valid_user@$uid.no-reply.drupal.org";
+  $anonymized_mail = strtolower("$valid_user@$uid.no-reply.drupal.org");
 
   return $anonymized_mail;
 }
