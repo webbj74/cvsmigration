@@ -29,7 +29,10 @@ function drush_cvsmigration_export() {
 
   $result = drush_db_select('cvs_migration', '*', NULL, NULL, NULL, NULL, 'uid', 'ASC');
   while ($row = drush_db_fetch_object($result)) {
-    $output .= sprintf("\"%s\",\"%s\"" . PHP_EOL, $row->cvs_user, $row->repomail);
+    $account = user_load(array('uid'=>$row->uid));
+    $fullnamefield = "full-name";
+    $fullname = $account->$fullnamefield ? $account->$fullnamefield : $account->name;
+    $output .= sprintf("\"%s\",\"%s\",\"%s\",\"%s\"" . PHP_EOL, $row->uid, $fullname, $row->cvs_user, $row->repomail);
   }
 
   $args = func_get_args();
