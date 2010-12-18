@@ -32,7 +32,9 @@ function drush_cvsmigration_export() {
     $account = user_load(array('uid' => $row->uid));
     $fullnamefield = "full-name";
     $fullname = (!empty($account->$fullnamefield)) ? $account->$fullnamefield : $account->name;
-    $output .= sprintf("\"%d\",\"%s\",\"%s\",\"%s\"" . PHP_EOL, $row->uid, addslashes($fullname), addslashes($row->cvs_user), addslashes($row->repomail));
+    $invalid = '[^a-zA-Z0-9_\-\+]+';
+    $valid_fullname = preg_replace("/$invalid/", '_', $fullname);
+    $output .= sprintf("\"%d\",\"%s\",\"%s\",\"%s\"" . PHP_EOL, $row->uid, addslashes($valid_fullname), addslashes($row->cvs_user), addslashes($row->repomail));
   }
 
   $args = func_get_args();
